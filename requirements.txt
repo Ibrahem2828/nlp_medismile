@@ -1,0 +1,15 @@
+torch==2.2.2+cpu
+numpy==1.26.4
+
+transformers>=4.35.0
+sentencepiece
+camel-tools
+
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+openai-whisper
+ffmpeg-python
+python-multipart
+
+--extra-index-url https://download.pytorch.org/whl/cpu

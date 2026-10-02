@@ -1,0 +1,16 @@
+.git
+.env
+.env.*
+env/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+models/
+datasets/
+runs/
+*.safetensors
+*.pt
+medismile-arabert-symptoms/
+.vscode/
+.idea/

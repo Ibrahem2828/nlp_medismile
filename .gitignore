@@ -1,0 +1,27 @@
+# Runtime secrets and local Python environments
+.env
+.env.*
+!.env.example
+env/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Downloaded or trained model artifacts belong in Hugging Face / object storage.
+models/
+datasets/
+runs/
+*.safetensors
+*.pt
+
+# This is an existing Hugging Face clone, not part of this GitHub repository.
+medismile-arabert-symptoms/
+
+# Local tooling
+.pytest_cache/
+.mypy_cache/
+.vscode/
+.idea/
+*.docx
+*.log

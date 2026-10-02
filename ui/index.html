@@ -1,0 +1,36 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>MediSmile | محرك تحليل الأعراض النصية</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+
+  
+<div class="container">
+  <div class="card">
+    <header>
+      <img src="/static/logo.png" class="logo" alt="MediSmile Logo">
+      <h1>محرك تحليل الأعراض النصية</h1>
+      <p class="subtitle">تنظيف النص العربي، تصنيف القواعد، وطبقة AraBERT لإعطاء تشخيص أولي وشدة وإلحاح</p>
+    </header>
+
+    <div class="controls">
+      <button id="startBtn">بدء التسجيل الصوتي</button>
+      <button id="stopBtn" disabled>إيقاف التسجيل</button>
+    </div>
+
+    <textarea id="symptomsText" placeholder="أدخل وصف الأعراض مثل: ألم مع تورم، نزيف عند التفريش، ألم يزداد بالليل، ألم مع البارد..."></textarea>
+
+    <button id="analyzeBtn" class="analyze">تحليل الأعراض</button>
+
+    <div id="result" class="result"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
