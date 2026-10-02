@@ -1,0 +1,3 @@
+id,text,source,group_id,label_a,urgency_a,red_flags_a,label_b,urgency_b,red_flags_b,label,urgency,red_flags,split,notes
+EX001,ألم شديد مستمر يوقظني من النوم,example,,التهاب عصب غير عكوس,Urgent,,التهاب عصب غير عكوس,Urgent,,التهاب عصب غير عكوس,Urgent,,dev,EXAMPLE ROW - delete
+EX002,بدون ورم ولا قيح وعندي ألم عند المضغ,example,,تسوس عميق,Non-Urgent,,تسوس عميق,Non-Urgent,,تسوس عميق,Non-Urgent,,dev,EXAMPLE ROW - delete

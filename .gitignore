@@ -28,3 +28,8 @@ medismile-arabert-symptoms/
 
 # Local clone of the Hugging Face Space (not part of this repository)
 nlp_medismile/
+
+# Real patient text and generated reports stay out of git
+evaluation/data/*.csv
+!evaluation/data/annotation_template.csv
+evaluation/reports/

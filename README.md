@@ -67,3 +67,8 @@ Behaviour guaranteed by the tests:
 - severity is derived from the final diagnosis and is always `high` when urgency is `Urgent`;
 - red flags (fever with swelling, trismus, dysphagia, breathing difficulty, trauma, uncontrolled bleeding, spreading facial swelling) force `Urgent` and are returned in `red_flags`;
 - non-Arabic input is rejected with HTTP 422.
+
+## Evaluation
+Accuracy is measured against a clinician-labelled, leakage-free gold set with `python -m evaluation.run_eval`
+(urgent recall, per-class F1, confusion matrix, calibration, quality gate). See [`evaluation/README.md`](evaluation/README.md)
+and the annotation guidelines in [`evaluation/guidelines_ar.md`](evaluation/guidelines_ar.md).
