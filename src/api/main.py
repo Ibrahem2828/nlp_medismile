@@ -1,4 +1,4 @@
-﻿# src/api/main.py
+# src/api/main.py
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +8,7 @@ from pathlib import Path
 from fastapi import status
 
 from src.symptom_understanding.inference import analyze_symptoms
+from src.symptom_understanding.text_utils import arabic_letter_ratio
 
 from src.api.schemas import (
     SymptomAnalysisRequest,
@@ -34,6 +35,15 @@ def index():
     return FileResponse(UI_DIR / "index.html")
 
 
+def _require_arabic(text: str) -> None:
+    """Reject empty / non-Arabic input instead of returning a meaningless 'unclear'."""
+    if arabic_letter_ratio(text) < 0.5:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Symptom description must be written in Arabic",
+        )
+
+
 class TextRequest(BaseModel):
     text: str
 
@@ -45,6 +55,7 @@ def analyze_text(req: TextRequest):
     if req.text.strip().isdigit():
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Text must not be numeric only")
 
+    _require_arabic(req.text)
     result = analyze_symptoms(req.text)
 
     return {
@@ -52,6 +63,7 @@ def analyze_text(req: TextRequest):
         "diagnosis": result["diagnosis"],
         "severity": result["severity_level"],
         "urgency": result["urgency"],
+        "red_flags": result["red_flags"],
         "rule_diagnosis": result["rule_diagnosis"],
         "arabert_diagnosis": result["arabert_diagnosis"],
         "arabert_score": result["arabert_score"],
@@ -75,6 +87,7 @@ def analyze_symptoms_system(payload: SymptomAnalysisRequest):
     Uses the SAME AI engine, but returns a clean contract.
     """
 
+    _require_arabic(payload.text)
     try:
         result = analyze_symptoms(payload.text)
 
@@ -95,6 +108,7 @@ def analyze_symptoms_system(payload: SymptomAnalysisRequest):
                 },
                 "model_version": result["model_version"],
                 "confidence": result["confidence"],
+                "red_flags": result["red_flags"],
             },
         )
 
@@ -118,6 +132,7 @@ def analyze_symptoms_contract(payload: SymptomAnalyzePayload):
     severity, and model_version. No final decision or image fusion happens here.
     """
 
+    _require_arabic(payload.symptoms_text)
     result = analyze_symptoms(payload.symptoms_text)
 
     return SymptomAnalyzeResponse(

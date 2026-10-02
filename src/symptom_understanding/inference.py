@@ -1,11 +1,12 @@
-﻿# src/symptom_understanding/inference.py
+# src/symptom_understanding/inference.py
 from __future__ import annotations
 import time
 from .patient_explanation import generate_patient_explanation
 
 from .text_preprocess import preprocess_text
 from .text_classifier import classify_text
-from src.rules.urgency import determine_urgency
+from src.rules.urgency import detect_red_flags, determine_urgency
+from src.rules.severity import final_severity
 from .arabert_similarity import AraBERTSemanticClassifier
 
 
@@ -46,21 +47,24 @@ def _hybrid_decision(rule_diag: str, arabert_label: str, arabert_score: float) -
 def analyze_symptoms(text: str):
     started = time.time()
     clean_text = preprocess_text(text)
+    # The rules also see sentence boundaries, so a negation never leaks into the next sentence.
+    rule_text = preprocess_text(text, keep_boundaries=True)
 
-    rule_diag, rule_sev = classify_text(clean_text)
+    rule_diag, rule_sev = classify_text(rule_text)
 
     sug = _ARABERT.suggest(clean_text)
 
     final_diag = _hybrid_decision(rule_diag, sug.label, sug.score)
 
-    final_sev = rule_sev
-    final_sev_lower = final_sev.lower()
-
     urgency = determine_urgency(
         diagnosis=final_diag,
-        severity=final_sev,
-        text=clean_text,
+        severity=rule_sev,
+        text=rule_text,
     )
+    # Severity follows the FINAL diagnosis; an Urgent case is always High.
+    final_sev = final_severity(final_diag, urgency)
+    final_sev_lower = final_sev.lower()
+    red_flags = detect_red_flags(rule_text)
     patient_explanation = generate_patient_explanation(
         diagnosis=final_diag,
         severity=final_sev,
@@ -105,6 +109,7 @@ def analyze_symptoms(text: str):
         "arabert_second_score": round(float(sug.second_score), 3) if sug.second_score is not None else None,
         "diagnosis": final_diag,
         "urgency": urgency,
+        "red_flags": red_flags,
         "confidence": round(confidence, 3),
         "confidence_level": confidence_level,
         "model_version": "arabert_symptoms_v1",

@@ -55,3 +55,15 @@ On Hugging Face Spaces, the Dockerfile runs uvicorn on port **7860** (mandatory)
 
 ## Safety Disclaimer
 ⚠️ This model provides AI-assisted preliminary analysis only. It is NOT a medical diagnosis and does not replace professional dental evaluation or imaging. Final decision rests with clinicians and image-based models (Fusion Engine).
+
+## Rule engine & tests
+The rule layer (`src/symptom_understanding/text_preprocess.py`, `text_utils.py`, `text_classifier.py`, `src/rules/`) is covered by offline unit tests (no model download):
+```bash
+python -m unittest discover -s tests -t .
+```
+Behaviour guaranteed by the tests:
+- rules and input share one normalised form (hamza, `ة`, dialect words such as `وجع`/`يوجعني` → `الم`), matched by whole words only;
+- negation has a proper scope (`بدون ورم ولا قيح`, `ما في تورم بس ألم شديد`, `ولا يوجد ألم أو تورم`) and sentence boundaries stop it;
+- severity is derived from the final diagnosis and is always `high` when urgency is `Urgent`;
+- red flags (fever with swelling, trismus, dysphagia, breathing difficulty, trauma, uncontrolled bleeding, spreading facial swelling) force `Urgent` and are returned in `red_flags`;
+- non-Arabic input is rejected with HTTP 422.

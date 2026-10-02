@@ -1,108 +1,90 @@
-﻿# src/symptom_understanding/text_classifier.py
+# src/symptom_understanding/text_classifier.py
 from __future__ import annotations
 
-from typing import Iterable, Tuple
+from typing import Tuple
 
+from .text_utils import has_any, prep_all
 
-def _has_any(text: str, terms: Iterable[str]) -> bool:
-    return any(t in text for t in terms)
-
-
-def _has_all(text: str, terms: Iterable[str]) -> bool:
-    return all(t in text for t in terms)
-
-
-def _negated(text: str, phrase: str) -> bool:
-    """Light negation handling for Arabic dialect/Fusha."""
-    negators = [
-        "ما في",
-        "مافي",
-        "مفيش",
-        "بدون",
-        "لا يوجد",
-        "مو موجود",
-        "ما عندي",
-        "ما عندنا",
-    ]
-    return any((n + " " + phrase) in text for n in negators) or any((n + phrase) in text for n in negators)
+# All vocabulary goes through the same normalisation as the input text
+# (see text_preprocess.preprocess_text), so the two can never drift apart.
+_SWELLING = prep_all(["تورم", "منتفخ", "انتفاخ", "ورم"])
+_PUS = prep_all(["قيح", "صديد", "خراج", "تقيح"])
+_PAIN = prep_all(["ألم", "وجع", "يوجع", "يوجعني", "توجع"])
+_NIGHT = prep_all(["بالليل", "ليلي", "ليلا", "يوقظني", "يمنعني من النوم", "لا استطيع النوم", "يزداد بالليل"])
+_PERSISTENT = prep_all(["مستمر", "مستمره", "متواصل", "لا يهدأ", "لا يزول", "لا يختفي", "لا يروح",
+                        "لا يتوقف", "طول اليوم", "يزداد مع الوقت", "دائم"])
+_THROBBING = prep_all(["نبضي", "ينبض", "نابض", "خافق", "نبض"])
+_SEVERE = prep_all(["شديد", "شديده", "شديد جدا", "لا يحتمل", "بقوه", "قوي", "فظيع", "رهيب", "مبرح"])
+# Thermal/sweet triggers only: "حساسية باللثة" (gum tenderness) is NOT a tooth stimulus.
+_STIMULUS = prep_all(["بارد", "ساخن", "حار", "حلو", "حلويات", "سكريات", "حلوى", "مشروبات"])
+_SURFACE_STIMULUS = prep_all(["بارد", "حلو", "حلويات", "سكريات", "حلوى", "برودة"])
+_TRANSIENT = prep_all(["يختفي", "يزول", "يروح", "ثواني", "لحظات", "لحظي", "لحظيا", "مؤقت", "عابر", "سريع"])
+_CHEWING = prep_all(["عند المضغ", "مع المضغ", "عند العض", "مع العض", "عند الضغط", "مع الضغط",
+                     "عند الاكل", "اثناء الاكل", "المضغ"])
+_CAVITY = prep_all(["تسوس", "نخر", "ثقب", "حفره", "تجويف"])
+_GUM = prep_all(["لثه", "اللثه", "لثتي", "لثتك"])
+# Bleeding while brushing/flossing implies the gums even when the word is missing.
+_GUM_CONTEXT = prep_all(["التفريش", "تفريش", "الفرشاه", "فرشاه", "الخيط", "خيط الاسنان", "السواك"])
+_BLEEDING = prep_all(["نزيف", "تنزف", "ينزف", "دم"])
+_TOOTH = prep_all(["سن", "ضرس"])
+_FEVER = prep_all(["حمى", "حراره", "سخونه"])
+_FACE_SWELLING = prep_all(["تورم الوجه", "تورم في الوجه", "انتفاخ الوجه", "الوجه منتفخ", "تورم الخد", "تورم في الخد"])
 
 
 def classify_text(text: str) -> Tuple[str, str]:
     """
-    Clinical rule-based classifier (Arabic).
+    Clinical rule-based classifier (Arabic). `text` must already be normalised with
+    `preprocess_text`.
     Returns: (diagnosis_label, severity_level)
     Diagnoses: خراج سني، التهاب عصب غير عكوس، التهاب عصب عكوس، تسوس عميق، تسوس سطحي، التهاب لثة، أو غير واضح.
+    Every symptom is checked with proper negation scope ("بدون ورم ولا قيح", "ما في ألم", ...).
     """
-
     text = (text or "").strip()
     if not text:
         return "غير واضح حالياً", "Low"
 
-    # Negation signals
-    denies_swelling = _negated(text, "تورم") or _negated(text, "ورم")
-    denies_pus = _negated(text, "قيح") or _negated(text, "صديد") or _negated(text, "خراج")
+    pain = has_any(text, _PAIN)
+    swelling = has_any(text, _SWELLING)
+    pus = has_any(text, _PUS)
+    night = pain and has_any(text, _NIGHT)
+    persistent = pain and has_any(text, _PERSISTENT)
+    throbbing = pain and has_any(text, _THROBBING)
+    severe = pain and has_any(text, _SEVERE)
+    stimulus = has_any(text, _STIMULUS)
+    transient = has_any(text, _TRANSIENT) and not has_any(text, _PERSISTENT)
+    chewing = has_any(text, _CHEWING)
+    cavity = has_any(text, _CAVITY)
+    bleeding = has_any(text, _BLEEDING)
+    gum = has_any(text, _GUM) or has_any(text, _GUM_CONTEXT)
+    fever = has_any(text, _FEVER)
+    face_swelling = has_any(text, _FACE_SWELLING)
 
-    # Core symptom groups
-    swelling_terms = ["تورم", "منتفخ", "انتفاخ", "ورم"]
-    pus_terms = ["قيح", "صديد", "خراج"]
-    night_terms = ["ألم بالليل", "يزداد بالليل", "ألم ليلي", "يوقظني من النوم"]
-    persistent_terms = ["ألم مستمر", "لا يهدأ", "لا يزول", "مستمر طول اليوم", "يزداد مع الوقت"]
-    throbbing_terms = ["نبضي", "ينبض", "خافق"]
-    severe_pain_terms = ["ألم شديد", "شديد جداً", "لا يحتمل", "يوجع بقوة"]
-    stimulus_terms = ["مع البارد", "مع الساخن", "مع الحار", "مع الحلو", "مع المشروبات", "مع الأكل"]
-    transient_terms = ["يختفي بسرعة", "يزول بسرعة", "يروح بعد ثواني", "يزول بعد إزالة المحفز"]
-    chewing_terms = ["ألم عند المضغ", "ألم مع الضغط", "يوجع عند العض", "يوجع عند الأكل", "ألم عند الضغط"]
-    cavity_terms = ["تسوس", "نخر", "ثقب", "حفرة", "تجويف"]
-    gum_terms = ["لثة", "اللثة"]
-    bleeding_terms = ["نزيف", "دم", "تنزف", "دم عند التفريش", "نزيف عند التفريش"]
+    # 1) Abscess
+    if pus:
+        return "خراج سني", "High"
+    if face_swelling or (swelling and (pain or severe or persistent or fever)):
+        return "خراج سني", "High"
 
-    has_swelling = _has_any(text, swelling_terms) and not denies_swelling
-    has_pus = _has_any(text, pus_terms) and not denies_pus
-    has_night = _has_any(text, night_terms)
-    has_persistent = _has_any(text, persistent_terms)
-    has_throbbing = _has_any(text, throbbing_terms)
-    has_severe = _has_any(text, severe_pain_terms)
-    has_stimulus = _has_any(text, stimulus_terms)
-    has_transient = _has_any(text, transient_terms)
-    has_chewing = _has_any(text, chewing_terms)
-    has_cavity = _has_any(text, cavity_terms)
-    has_bleeding = _has_any(text, bleeding_terms)
-    has_gum = _has_any(text, gum_terms)
-
-    abscess_blocked = denies_swelling and denies_pus
-
-    # 1) Abscess (STRICT)
-    if not abscess_blocked:
-        if has_pus:
-            return "خراج سني", "High"
-        if has_swelling and (has_severe or has_persistent):
-            return "خراج سني", "High"
-
-    # 2) Irreversible pulpitis (STRICT)
-    if has_persistent and (has_night or has_throbbing or has_severe):
+    # 2) Irreversible pulpitis
+    if persistent and (night or throbbing or severe):
         return "التهاب عصب غير عكوس", "High"
-
-    if has_night and has_severe:
+    if night and severe:
         return "التهاب عصب غير عكوس", "High"
-
-    if denies_night := _negated(text, "ألم ليلي"):
-        if denies_night and has_transient and has_stimulus:
-            return "التهاب عصب عكوس", "Moderate"
 
     # 3) Reversible pulpitis
-    if has_stimulus and has_transient:
+    if stimulus and transient:
         return "التهاب عصب عكوس", "Moderate"
 
     # 4) Deep caries
-    if (has_chewing and _has_any(text, ["سن", "ضرس"])) or (has_cavity and has_chewing):
+    if chewing and (pain or cavity or has_any(text, _TOOTH)):
         return "تسوس عميق", "Moderate"
 
-    # 5) Surface caries
-    if has_stimulus and _has_any(text, ["حساسية", "برودة", "بارد", "حلو"]) and not has_persistent and not has_night:
-        return "تسوس سطحي", "Low"
-
-    # 6) Gingivitis
-    if has_bleeding and has_gum:
+    # 5) Gingivitis (before surface caries: gum symptoms must not be read as tooth sensitivity)
+    if bleeding and gum:
         return "التهاب لثة", "Low"
+
+    # 6) Surface caries
+    if stimulus and has_any(text, _SURFACE_STIMULUS) and not persistent and not night:
+        return "تسوس سطحي", "Low"
 
     return "غير واضح حالياً", "Low"
